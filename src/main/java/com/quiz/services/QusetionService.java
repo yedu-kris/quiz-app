@@ -32,8 +32,8 @@ public class QusetionService {
          return new ResponseEntity<>(new ArrayList<>(),HttpStatus.BAD_REQUEST);
        
     }
-    public long getCountOfRecords() {
-        return questionDao.count();
+    public ResponseEntity<Long> getCountOfRecords() {
+        return new ResponseEntity<>(questionDao.count(),HttpStatus.OK);
     }
 
     public List<Questions> getQuestionsByCategory(String category) {

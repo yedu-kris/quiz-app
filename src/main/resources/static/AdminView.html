@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quiz Questions</title>
+    <style>
+        /* CSS for the tree */
+        body {
+            background-color: #87CEEB; /* Light Blue for the sky */
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            height: 100vh;
+        }
+
+        .container {
+            background-color: #228B22; /* Dark Green for the ground */
+            padding: 20px;
+            border-radius: 0 0 20px 20px;
+            margin-top: auto;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5); /* Add shadow to the container */
+        }
+
+        .question {
+            background-color: #FFFFFF; /* White background for questions */
+            width: calc(50% - 30px); /* 50% width with margin */
+            padding: 20px;
+            margin: 15px;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Styling for the question count box */
+        #question-count-box {
+            background-color: #333; /* Dark gray background color for the box */
+            color: #fff; /* White text color */
+            padding: 10px;
+            border-radius: 10px;
+            text-align: center;
+            width: 200px;
+            margin: 20px auto;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5); /* Add shadow to the box */
+        }
+
+        /* Add more colors here if needed */
+
+        /* Sun */
+        .sun {
+            background-color: #ffea00; /* Yellow color for the sun */
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            position: absolute;
+            top: 50px;
+            right: 50px;
+        }
+
+        /* CSS for the dynamic color change */
+
+        .color-box {
+            width: 200px;
+            height: 200px;
+            border: 2px solid #333;
+            text-align: center;
+            line-height: 200px;
+            font-size: 24px;
+            border-radius: 10px;
+            cursor: pointer; /* Add cursor pointer for interaction */
+            transition: background-color 0.3s; /* Smooth color transition */
+            background-color: #3498db; /* Default background color */
+            color: #fff; /* Default text color */
+        }
+
+        .color-box:hover {
+            background-color: #e74c3c; /* Hover background color */
+        }
+
+        /* Added styles for question options */
+        .options {
+            display: none;
+            margin-top: 15px;
+        }
+
+        .option {
+            font-size: 18px;
+            margin: 5px 0;
+        }
+
+        .show-options {
+            background-color: #3498db;
+            color: #fff;
+            border: none;
+            padding: 5px 10px;
+            cursor: pointer;
+            border-radius: 5px;
+            font-size: 16px;
+            margin-top: 10px;
+        }
+
+        /* Form styles */
+        #add-question-form {
+            background-color: #FFFFFF; /* White background for the form */
+            width: calc(50% - 30px); /* 50% width with margin */
+            padding: 20px;
+            margin: 15px;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Form input styles */
+        .form-input {
+            display: block;
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+
+        /* Form button styles */
+        .form-button {
+            background-color: #3498db;
+            color: #fff;
+            border: none;
+            padding: 10px 20px;
+            cursor: pointer;
+            border-radius: 5px;
+            font-size: 18px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Question Count Box -->
+    <div id="question-count-box">
+        <p id="question-count"></p>
+    </div>
+
+    <!-- Main Content Container -->
+    <div class="container">
+        <h1>Quiz Questions</h1>
+        <div id="questions"></div>
+    </div>
+
+    
+
+    <!-- Question Adding Form -->
+    <form id="add-question-form">
+        <h2>Add a New Question</h2>
+        <input type="text" id="question" class="form-input" placeholder="Question" required>
+        <input type="text" id="category" class="form-input" placeholder="Category" required>
+        <input type="text" id="option1" class="form-input" placeholder="Option 1" required>
+        <input type="text" id="option2" class="form-input" placeholder="Option 2" required>
+        <input type="text" id="option3" class="form-input" placeholder="Option 3" required>
+        <input type="text" id="option4" class="form-input" placeholder="Option 4" required>
+        <input type="text" id="answer" class="form-input" placeholder="Answer" required>
+        <button type="button" onclick="addQuestion()" class="form-button">Add Question</button>
+    </form>
+
+    <script>
+        
+        function fetchQuestionCount() {
+            fetch("http://localhost:8080/question/questionCount")
+                .then(response => response.json())
+                .then(data => {
+                    const questionCount = parseInt(data); // Parse the response as an integer
+                    const questionCountElement = document.getElementById("question-count");
+                    questionCountElement.textContent = `Total Question Count: ${questionCount}`; // Update the element's content
+                })
+                .catch(error => console.error(error));
+        }
+
+        // Function to fetch questions from the API and display them
+        function fetchQuestions() {
+            fetch("http://localhost:8080/question/allquestions")
+                .then(response => response.json())
+                .then(data => displayQuestions(data))
+                .catch(error => console.error(error));
+        }
+
+        // Function to display questions on the webpage
+        function displayQuestions(questions) {
+            const questionsDiv = document.getElementById("questions");
+
+            questions.forEach(question => {
+                const questionDiv = document.createElement("div");
+                questionDiv.className = "question";
+
+                const questionText = document.createElement("p");
+                questionText.textContent = `Q${question.id}: ${question.question}`;
+                questionDiv.appendChild(questionText);
+
+                const optionsDiv = document.createElement("div");
+                optionsDiv.className = "options";
+
+                for (let i = 1; i <= 4; i++) {
+                    const optionText = document.createElement("p");
+                    optionText.className = "option";
+                    optionText.textContent = `Option ${i}: ${question["option" + i]}`;
+                    optionsDiv.appendChild(optionText);
+                }
+
+                questionDiv.appendChild(optionsDiv);
+
+                const showOptionsButton = document.createElement("button");
+                showOptionsButton.textContent = "Show Options";
+                showOptionsButton.className = "show-options";
+                showOptionsButton.onclick = function() {
+                    optionsDiv.style.display = "block";
+                    showOptionsButton.style.display = "none";
+                };
+                questionDiv.appendChild(showOptionsButton);
+
+                questionsDiv.appendChild(questionDiv);
+            });
+        }
+
+        // Function to add a new question
+        function addQuestion() {
+            const questionData = {
+                question: document.getElementById("question").value,
+                category: document.getElementById("category").value,
+                option1: document.getElementById("option1").value,
+                option2: document.getElementById("option2").value,
+                option3: document.getElementById("option3").value,
+                option4: document.getElementById("option4").value,
+                answer: document.getElementById("answer").value
+            };
+
+            // Send a POST request to add the question
+            fetch("http://localhost:8080/question/addQuestions", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify([questionData])
+            })
+            .then(response => response.json())
+            .then(data => {
+                // Handle the response (e.g., show a success message)
+                alert("Question added successfully!");
+                // You can optionally clear the form here
+                document.getElementById("add-question-form").reset();
+                // Fetch and display updated question count and questions
+                fetchQuestionCount();
+                fetchQuestions();
+            })
+            .catch(error => {
+                // Handle errors (e.g., show an error message)
+                console.error("Error:", error);
+                alert("Error adding the question. Please try again.");
+            });
+        }
+
+        // Call the fetchQuestionCount and fetchQuestions functions when the page loads
+        fetchQuestionCount();
+        fetchQuestions();
+    </script>
+</body>
+</html>

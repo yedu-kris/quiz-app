@@ -26,6 +26,11 @@ public class QuestionController {
     public ResponseEntity<List<Questions>> getAllQuestions(){
         return qusetionService.getAllQuestions();
     }
+
+     @GetMapping("/questionCount")
+    public ResponseEntity<Long> getCountOfRecords(){
+        return qusetionService.getCountOfRecords();
+    }
     @GetMapping("/category/{category}")
     public List<Questions> getQuestionsByCategory(@PathVariable String category){
         return qusetionService.getQuestionsByCategory(category);

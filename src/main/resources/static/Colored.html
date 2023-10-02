@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quiz App</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            text-align: center;
+            background-color: #f7f7f7;
+            border-radius: 10px;
+        }
+
+        h1 {
+            font-size: 24px;
+        }
+
+        #question {
+            font-size: 20px;
+            margin-bottom: 20px;
+        }
+
+        #options button {
+            font-size: 16px;
+            padding: 10px 20px;
+            margin: 5px;
+            cursor: pointer;
+            background-color: #3498db;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+        }
+
+        #result {
+            font-size: 18px;
+            margin: 10px 0;
+        }
+
+        #score {
+            font-size: 18px;
+        }
+
+        #progress {
+            margin-top: 20px;
+            height: 20px;
+            background-color: #e0e0e0;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        #progress .bar {
+            height: 100%;
+            width: 0;
+            background-color: #3498db;
+            border-radius: 10px;
+            transition: width 0.5s;
+        }
+
+        /* Overlay styles */
+        .overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            z-index: 2; /* Higher z-index to overlay the entire page */
+        }
+
+        /* Pop-up styles */
+        .popup {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: #fff;
+            text-align: center;
+            max-width: 400px;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            z-index: 3; /* Higher z-index to display above the overlay */
+        }
+
+        .close {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            font-size: 20px;
+            cursor: pointer;
+        }
+
+         /* New CSS rule for the background and score container */
+        .quiz-background {
+            background-color: #3498db; /* Change to your desired background color */
+        }
+
+        .score-container {
+            display: none; /* Initially hide the score container */
+            color: #fff; /* Change to your desired text color */
+            padding: 20px;
+            border-radius: 10px;
+            background-color: rgba(0, 0, 0, 0.7);
+            margin: 20px auto;
+            max-width: 400px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Quiz App</h1>
+        <p id="question"></p>
+        <div id="options">
+            <button onclick="checkAnswer(1)" id="option1"></button>
+            <button onclick="checkAnswer(2)" id="option2"></button>
+            <button onclick="checkAnswer(3)" id="option3"></button>
+            <button onclick="checkAnswer(4)" id="option4"></button>
+        </div>
+        <p id="result"></p>
+        
+        <button onclick="nextQuestion()" id="nextBtn" style="display: none;">Next Question</button>
+    </div>
+
+    <!-- Background overlay for the pop-up -->
+    <div id="backgroundOverlay" class="overlay"></div>
+
+    <div class="score-container" id="scoreContainer">
+        <h2>Quiz Completed!</h2>
+        <p id="score">Score: <span id="quizScore">0</span></p>
+
+        <svg id="progressCircle" width="100" height="100" style="display: none;">
+    <circle id="circleBackground" cx="50" cy="50" r="40" fill="none" stroke="#e0e0e0" stroke-width="10" />
+    <circle id="circle" cx="50" cy="50" r="40" fill="none" stroke="#3498db" stroke-width="10" stroke-dasharray="251.2" stroke-dashoffset="251.2" />
+    <text id="percentageText" x="50" y="50" text-anchor="middle" dominant-baseline="middle" font-size="20">0%</text>
+</svg>
+    </div>
+
+
+    <script>
+        let currentQuestionIndex = 0;
+        let score = 0;
+        let questions = [];
+        let responses = [];
+        let responseLength=0;
+
+        function fetchQuestions() {
+            fetch("http://localhost:8080/quiz/get/10")
+                .then(response => response.json())
+                .then(data => {
+                    questions = data;
+                    displayQuestion();
+                     responseLength = Array.isArray(data) ? data.length : Object.keys(data).length;
+    console.log("Response length:", responseLength);
+                })
+                .catch(error => console.error(error));
+        }
+
+        // Call the fetchQuestions function to fetch questions when the page loads
+        fetchQuestions();
+
+        function displayQuestion() {
+            if (currentQuestionIndex < questions.length) {
+                const currentQuestion = questions[currentQuestionIndex];
+                document.getElementById("question").textContent = currentQuestion.question;
+                document.getElementById("option1").textContent = currentQuestion.option1;
+                document.getElementById("option2").textContent = currentQuestion.option2;
+                document.getElementById("option3").textContent = currentQuestion.option3;
+                document.getElementById("option4").textContent = currentQuestion.option4;
+            } else {
+                document.getElementById("question").textContent = "Quiz completed!";
+                document.getElementById("nextBtn").style.display = "none";
+                // When the quiz is completed, send responses to the API
+                sendResponsesToAPI();
+            }
+
+        }
+
+        function checkAnswer(selectedOption) {
+            const currentQuestion = questions[currentQuestionIndex];
+            let response = {
+                id: currentQuestion.id,
+                response: currentQuestion["option" + selectedOption]
+            };
+
+            responses.push(response);
+            currentQuestionIndex++;
+            displayQuestion();
+        }
+
+        function sendResponsesToAPI() {
+    // Convert the responses array to JSON format
+    const responsesJSON = JSON.stringify(responses);
+
+    // Define the API endpoint
+    const url = "http://localhost:8080/quiz/submit/10"; // Replace with your desired endpoint
+
+    const requestOptions = {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+        },
+        body: responsesJSON,
+    };
+
+    fetch(url, requestOptions)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error("Network response was not ok");
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log("Response from server:", data);
+            //document.getElementById("result").textContent = "Score: " + JSON.stringify(data);
+
+            // Extract and display the result from the server response
+            const quizResult = JSON.stringify(data); // Adjust the property name as per your server response structure
+
+            // Show the result container
+            const resultContainer = document.getElementById("result");
+            resultContainer.textContent = "Score: " + quizResult;
+
+            // Show the circular progress bar
+            const progressCircle = document.getElementById("progressCircle");
+            progressCircle.style.display = "block";
+
+            // Calculate the score percentage
+            const scorePercentage = (quizResult / responseLength) * 100;
+
+            // Animate the circular progress bar
+            animateCircularProgressBar(scorePercentage);
+
+            const scoreContainer = document.getElementById("scoreContainer");
+                    const mainContent = document.querySelector(".container");
+                    scoreContainer.style.display = "block";
+                    mainContent.style.display = "none";
+
+                    // Update the score in the score container
+                    document.getElementById("quizScore").textContent = quizResult;
+                    
+                    // Change the background color
+                    document.body.classList.add("quiz-background");
+        })
+        .catch(error => {
+            console.error("Error:", error);
+            // Handle errors here if needed
+        });
+}
+
+
+        function animateCircularProgressBar(percentage) {
+    const circle = document.getElementById("circle");
+    const percentageText = document.getElementById("percentageText");
+
+    // Calculate the dash offset based on the percentage
+    const dashOffset = 251.2 - (251.2 * percentage) / 100;
+
+    // Update the dash offset and text content with animation
+    circle.style.strokeDashoffset = dashOffset;
+    percentageText.textContent = percentage.toFixed(0) + "%";
+
+    // Add animation for a smooth transition
+    circle.style.transition = "stroke-dashoffset 1s ease-in-out";
+    percentageText.style.transition = "opacity 0.5s ease-in-out";
+
+    // Delay to allow the animation to start after the pop-up is displayed
+    setTimeout(() => {
+        circle.style.strokeDashoffset = dashOffset;
+        percentageText.style.opacity = 1;
+    }, 100);
+}
+        function closePopup() {
+            const overlay = document.getElementById("backgroundOverlay");
+            overlay.style.display = "none";
+
+            const popup = document.getElementById("quizResultPopup");
+            popup.style.display = "none";
+        }
+    </script>
+</body>
+</html>
